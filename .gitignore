@@ -1,4 +1,4 @@
-# Dependencies
+git push -u origin main# Dependencies
 node_modules/
 */node_modules/
 npm-debug.log*
@@ -168,3 +168,7 @@ Temporary Items
 
 # Generated files
 /generated/
+
+# Local files (user-specific)
+er.name
+not working.txt

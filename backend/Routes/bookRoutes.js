@@ -16,6 +16,6 @@ router.get('/:id', validateId, bookController.getBookById);
 // Protected routes
 router.post('/', authenticateToken, requireRole(['ADMIN', 'LIBRARIAN']), adminActionLimiter, validateBook, bookController.createBook);
 router.put('/:id', authenticateToken, requireRole(['ADMIN', 'LIBRARIAN']), adminActionLimiter, validateId, validateBookUpdate, bookController.updateBook);
-router.delete('/:id', authenticateToken, requireRole(['ADMIN']), adminActionLimiter, validateId, bookController.deleteBook);
+router.delete('/:id', authenticateToken, requireRole(['ADMIN', 'LIBRARIAN']), adminActionLimiter, validateId, bookController.deleteBook);
 
 export default router;

@@ -15,6 +15,6 @@ router.get('/', authenticateToken, requireRole(['ADMIN', 'LIBRARIAN']), userCont
 router.get('/:id', authenticateToken, validateId, userController.getUserById);
 router.post('/', authenticateToken, requireRole(['ADMIN']), adminActionLimiter, validateUser, userController.createUser);
 router.put('/:id', authenticateToken, requireRole(['ADMIN']), adminActionLimiter, validateId, validateUserUpdate, userController.updateUser);
-router.delete('/:id', authenticateToken, requireRole(['ADMIN']), adminActionLimiter, validateId, userController.deleteUser);
+router.delete('/:id', authenticateToken, requireRole(['ADMIN', 'LIBRARIAN']), adminActionLimiter, validateId, userController.deleteUser);
 
 export default router;

@@ -126,15 +126,35 @@ export const updateBook = async (req, res) => {
 
 export const deleteBook = async (req, res) => {
   try {
-    const book = await bookService.getBookById(req.params.id);
+    console.log('=== DELETE BOOK CONTROLLER DEBUG ===');
+    const { id } = req.params;
+    console.log('Book ID to delete:', id);
+    console.log('Request user:', req.user);
+    
+    // Check if book exists
+    const book = await bookService.getBookById(id);
+    console.log('Book found:', book ? 'Yes' : 'No');
+    
     if (!book) {
       return res.status(404).json({ error: 'Book not found' });
     }
 
-    await bookService.deleteBook(req.params.id);
-    res.status(204).send();
+    console.log('Proceeding with book deletion...');
+    await bookService.deleteBook(id);
+    console.log('Book deletion completed successfully');
+    res.status(200).json({ message: 'Book deleted successfully' });
   } catch (error) {
     console.error('Error deleting book:', error.message);
-    res.status(500).json({ error: 'Failed to delete book' });
+    console.error('Full error:', error);
+    
+    if (error.message.includes('active borrow records')) {
+      return res.status(400).json({ error: error.message });
+    }
+    
+    if (error.message === 'Book not found') {
+      return res.status(404).json({ error: 'Book not found' });
+    }
+    
+    res.status(500).json({ error: 'Failed to delete book. Please try again.' });
   }
 };

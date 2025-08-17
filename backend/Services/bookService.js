@@ -102,7 +102,68 @@ export const updateBook = async (id, data) => prisma.book.update({
   }
 });
 
-export const deleteBook = async (id) => prisma.book.delete({ where: { id } });
+export const deleteBook = async (id) => {
+  try {
+    console.log('=== DELETE BOOK DEBUG ===');
+    console.log('Attempting to delete book with ID:', id);
+    
+    // First, check if book has any active borrow records
+    const activeBorrows = await prisma.borrowRecord.findMany({
+      where: {
+        bookId: id,
+        returnedAt: null
+      }
+    });
+
+    console.log('Active borrows found:', activeBorrows.length);
+
+    if (activeBorrows.length > 0) {
+      throw new Error(`Cannot delete book: Book has ${activeBorrows.length} active borrow records. Please return all books first.`);
+    }
+
+    console.log('No active borrows, proceeding with deletion...');
+
+    // Delete book with all related records in a transaction
+    return await prisma.$transaction(async (tx) => {
+      console.log('Starting transaction...');
+      
+      // Delete fines associated with this book's borrow records
+      const deletedFines = await tx.fine.deleteMany({
+        where: {
+          borrowRecord: {
+            bookId: id
+          }
+        }
+      });
+      console.log('Deleted fines:', deletedFines.count);
+
+      // Delete borrow records
+      const deletedBorrows = await tx.borrowRecord.deleteMany({
+        where: { bookId: id }
+      });
+      console.log('Deleted borrow records:', deletedBorrows.count);
+
+      // Delete wishlist items
+      const deletedWishlist = await tx.wishlist.deleteMany({
+        where: { bookId: id }
+      });
+      console.log('Deleted wishlist items:', deletedWishlist.count);
+
+      // Finally delete the book
+      const deletedBook = await tx.book.delete({ where: { id } });
+      console.log('Book deleted successfully:', deletedBook.id);
+      
+      return deletedBook;
+    });
+  } catch (error) {
+    console.error('Error in deleteBook:', error);
+    if (error.code === 'P2025') {
+      throw new Error('Book not found');
+    }
+    throw error;
+  }
+};
+
 export const getBookByISBN = async (isbn) => prisma.book.findUnique({ where: { isbn } });
 
 // Search books with advanced filtering

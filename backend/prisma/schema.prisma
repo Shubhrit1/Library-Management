@@ -1,0 +1,106 @@
+// This is your Prisma schema file, generated to match your migrations and original schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------- ENUMS ----------
+enum Role {
+  ADMIN
+  LIBRARIAN
+  MEMBER
+}
+
+// ---------- MODELS ----------
+
+// User table: stores all users (admin, librarian, member)
+model User {
+  id            String   @id @default(cuid()) // Primary key
+  name          String
+  email         String   @unique              // Unique email
+  passwordHash  String?                       // For email/password login
+  googleId      String?  @unique              // For Google OAuth
+  role          Role     @default(MEMBER)     // User role
+  imageUrl      String?                       // Cloudinary profile image
+  refreshToken  String?                       // For JWT refresh
+
+  // Relations
+  borrowRecords BorrowRecord[]                // All borrow records for this user
+  createdBooks  Book[]       @relation("CreatedBooks") // Books created by this user
+  updatedBooks  Book[]       @relation("UpdatedBooks") // Books updated by this user
+  wishlistItems Wishlist[]                    // User's wishlist items
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+// Book table: stores all books in the library
+model Book {
+  id             String        @id @default(cuid()) // Primary key
+  title          String
+  author         String
+  publisher      String?                           // Publisher name (nullable, see migration)
+  isbn           String?       @unique             // ISBN, unique if present
+  publishedYear  Int?                              
+  imageUrl       String?                           // Cloudinary image
+  availableCopies Int          @default(1)         // Number of available copies
+
+  // Relations
+  borrowRecords  BorrowRecord[]
+  createdById    String?
+  updatedById    String?
+  createdBy      User?         @relation("CreatedBooks", fields: [createdById], references: [id])
+  updatedBy      User?         @relation("UpdatedBooks", fields: [updatedById], references: [id])
+  wishlistItems  Wishlist[]                       // Books in user wishlists
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+// BorrowRecord table: tracks which user borrowed which book and when
+model BorrowRecord {
+  id         String   @id @default(cuid()) // Primary key
+  userId     String
+  bookId     String
+  borrowedAt DateTime @default(now())
+  returnedAt DateTime?
+
+  // Relations
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  book       Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  fines      Fine[]   // Fines associated with this borrow record
+}
+
+// Wishlist table: tracks user wishlists
+model Wishlist {
+  id        String   @id @default(cuid()) // Primary key
+  userId    String
+  bookId    String
+  addedAt   DateTime @default(now())
+  notes     String?                       // Optional user notes
+
+  // Relations
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  book      Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  // Ensure unique user-book combination
+  @@unique([userId, bookId])
+}
+
+// Fine table: tracks fines for late returns, etc.
+model Fine {
+  id             String       @id @default(cuid()) // Primary key
+  borrowRecordId String
+  amount         Float
+  reason         String?
+  paid           Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+
+  // Relations
+  borrowRecord   BorrowRecord @relation(fields: [borrowRecordId], references: [id], onDelete: Cascade)
+}
